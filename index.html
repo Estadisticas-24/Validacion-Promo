@@ -176,6 +176,35 @@
             background-color: #cc8400;
         }
 
+        /* Ajustes específicos para pantallas más pequeñas */
+        @media (max-width: 768px) {
+            body {
+                background-size: 50% 50%; /* Ajusta el tamaño de la imagen en pantallas pequeñas */
+                background-position: center top; /* Ajusta la posición de la imagen en pantallas más pequeñas */
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                background-size: 50% 50%; /* Ajusta el tamaño de la imagen en pantallas muy pequeñas */
+                background-position: center top; /* Ajusta la posición de la imagen en pantallas muy pequeñas */
+            }
+        }
+
+        /* Ajustes específicos para pantallas en modo horizontal */
+        @media (max-width: 768px) and (orientation: landscape) {
+            body {
+                background-size: 50% 50%; /* Ajusta el tamaño de la imagen en pantallas horizontales pequeñas */
+                background-position: center center; /* Centra la imagen en pantallas horizontales pequeñas */
+            }
+        }
+
+        @media (max-width: 480px) and (orientation: landscape) {
+            body {
+                background-size: 50% 50%; /* Ajusta el tamaño de la imagen en pantallas horizontales muy pequeñas */
+                background-position: center center; /* Centra la imagen en pantallas horizontales muy pequeñas */
+            }
+        }
         
     </style>
 </head>
