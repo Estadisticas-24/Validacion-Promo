@@ -12,10 +12,10 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: url('logonegroo.png') no-repeat center center fixed;
-            background-size: 53% 53%; /* Ajusta el tamaño de la imagen de fondo */
+            background: url('logonegroo.jpg') no-repeat center center fixed;
+            background-size:contain; /* Ajusta el tamaño de la imagen de fondo */
             background-attachment: fixed; /* Fija la imagen de fondo para que no se desplace */
-            background-color: #f4f4f9;
+            background-color: #f7f7f7;
             margin: 0;
             padding: 20px;
         }
@@ -175,36 +175,7 @@
         .clear-button:hover {
             background-color: #cc8400;
         }
-
-        /* Ajustes específicos para pantallas más pequeñas */
-        @media (max-width: 768px) {
-            body {
-                background-size: 25% 25%; /* Ajusta el tamaño de la imagen en pantallas pequeñas */
-                background-position: center top; /* Ajusta la posición de la imagen en pantallas más pequeñas */
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                background-size: 25% 25%; /* Ajusta el tamaño de la imagen en pantallas muy pequeñas */
-                background-position: center top; /* Ajusta la posición de la imagen en pantallas muy pequeñas */
-            }
-        }
-
-        /* Ajustes específicos para pantallas en modo horizontal */
-        @media (max-width: 768px) and (orientation: landscape) {
-            body {
-                background-size: 50% 50%; /* Ajusta el tamaño de la imagen en pantallas horizontales pequeñas */
-                background-position: center center; /* Centra la imagen en pantallas horizontales pequeñas */
-            }
-        }
-
-        @media (max-width: 480px) and (orientation: landscape) {
-            body {
-                background-size: 50% 50%; /* Ajusta el tamaño de la imagen en pantallas horizontales muy pequeñas */
-                background-position: center center; /* Centra la imagen en pantallas horizontales muy pequeñas */
-            }
-        }
+    
         
     </style>
 </head>
