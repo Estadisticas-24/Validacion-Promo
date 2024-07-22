@@ -225,6 +225,7 @@
         <button id="agregar" disabled>Agregar</button>
         <button id="descargarExcel" class="download-button" disabled>Descargar Excel</button>
         <button id="vaciarTablaPromorack" class="clear-button">Vaciar Tabla</button>
+        <p id="mensajeRepetido" style="color: red; display: none;">Código de cliente ya agregado.</p>
     </div>
 
     <div id="containerCambios" class="container">
@@ -485,6 +486,10 @@
                 }
             });
 
+            function esCodigoRepetido(codigoCliente) {
+                return clientesAgregados.some(cliente => cliente.Codigo_Cliente === codigoCliente);
+            }
+
             $('#agregar').on('click', function() {
                 const centro = $('#centro').val();
                 const jefeZona = $('#jefeZona').val();
@@ -494,12 +499,20 @@
                 const nombreCliente = $('#nombreCliente').val();
                 const tipoCluster = $('#tipoCluster').val();
                 const direccion = $('#direccion').val();
+                const codigoCliente = cliente.slice(0, 13);
+
+                if (esCodigoRepetido(codigoCliente)) {
+                    $('#mensajeRepetido').show();
+                    return;
+                }
+
+                $('#mensajeRepetido').hide();
 
                 const nuevoCliente = {
                     Centro: centro,
                     Jefe_Zona: jefeZona,
                     Ruta: ruta,
-                    Codigo_Cliente: cliente.slice(0, 13),
+                    Codigo_Cliente: codigoCliente,
                     Nombre_de_Cliente: nombreNegocio,
                     Nombre_de_Negocio: nombreCliente,
                     Tipo_de_Cluster: tipoCluster,
@@ -519,7 +532,7 @@
                         <td>${centro}</td>
                         <td>${jefeZona}</td>
                         <td>${ruta}</td>
-                        <td>${cliente.slice(0, 13)}</td>
+                        <td>${codigoCliente}</td>
                         <td>${nombreNegocio}</td>
                         <td>${nombreCliente}</td>
                         <td class="${tipoCluster.toLowerCase() === 'mantener' || tipoCluster.toLowerCase() === 'optimizar' ? 'highlight-background' : ''}">${tipoCluster}</td>
@@ -566,90 +579,91 @@
                 contadorPromorack++;
                 $('#contadorPromorack').text(`: ${contadorPromorack}`);
                 cargarClientes();
-});
+            });
 
-function cargarClientes() {
-    const selectedCentro = $('#centro').val();
-    const selectedJefeZona = $('#jefeZona').val();
-    const selectedRuta = $('#ruta').val();
-    const clienteSelect = $('#cliente');
+            function cargarClientes() {
+                const selectedCentro = $('#centro').val();
+                const selectedJefeZona = $('#jefeZona').val();
+                const selectedRuta = $('#ruta').val();
+                const clienteSelect = $('#cliente');
 
-    if (selectedCentro && selectedJefeZona && selectedRuta) {
-        const clientes = [...new Set(clientesSegmentacion
-            .filter(item => item.Centro === selectedCentro && item.Jefe_Zona === selectedJefeZona && item.Ruta === selectedRuta)
-            .map(item => item.Codigo_Cliente_HTML))];
-        console.log("Clientes encontrados:", clientes);
-        clienteSelect.empty().append('<option value="">Selecciona un cliente</option>');
-        clientes.forEach(cliente => {
-            const option = new Option(cliente, cliente);
-            clienteSelect.append(option);
-        });
+                if (selectedCentro && selectedJefeZona && selectedRuta) {
+                    const clientes = [...new Set(clientesSegmentacion
+                        .filter(item => item.Centro === selectedCentro && item.Jefe_Zona === selectedJefeZona && item.Ruta === selectedRuta)
+                        .map(item => item.Codigo_Cliente_HTML))];
+                    console.log("Clientes encontrados:", clientes);
+                    clienteSelect.empty().append('<option value="">Selecciona un cliente</option>');
+                    clientes.forEach(cliente => {
+                        const option = new Option(cliente, cliente);
+                        clienteSelect.append(option);
+                    });
 
-        clienteSelect.prop('disabled', false).select2();
-        $('#agregar').prop('disabled', true);
-        $('#verificar').prop('disabled', true);
-    }
-}
+                    clienteSelect.prop('disabled', false).select2();
+                    $('#agregar').prop('disabled', true);
+                    $('#verificar').prop('disabled', true);
+                }
+            }
 
-$('#ruta').select2().on('change', cargarClientes);
-$('#cliente').select2().on('change', function() {
-    const selectedCentro = $('#centro').val();
-    const selectedJefeZona = $('#jefeZona').val();
-    const selectedRuta = $('#ruta').val();
-    const selectedCliente = $(this).val();
-    const selectedClienteTruncado = selectedCliente.slice(0, 13);
-    console.log("Cliente seleccionado:", selectedCliente);
+            $('#ruta').select2().on('change', cargarClientes);
+            $('#cliente').select2().on('change', function() {
+                const selectedCentro = $('#centro').val();
+                const selectedJefeZona = $('#jefeZona').val();
+                const selectedRuta = $('#ruta').val();
+                const selectedCliente = $(this).val();
+                const selectedClienteTruncado = selectedCliente.slice(0, 13);
+                console.log("Cliente seleccionado:", selectedCliente);
 
-    const combina = clientesSegmentacion.filter(item => 
-        item.Centro === selectedCentro && 
-        item.Jefe_Zona === selectedJefeZona &&
-        item.Ruta === selectedRuta && 
-        item.Codigo_Cliente_HTML.slice(0, 13) === selectedClienteTruncado
-    );
-    console.log("Combinación encontrada:", combina);
+                const combina = clientesSegmentacion.filter(item => 
+                    item.Centro === selectedCentro && 
+                    item.Jefe_Zona === selectedJefeZona &&
+                    item.Ruta === selectedRuta && 
+                    item.Codigo_Cliente_HTML.slice(0, 13) === selectedClienteTruncado
+                );
+                console.log("Combinación encontrada:", combina);
 
-    const resultadoElement = $('#resultado');
-    const agregarButton = $('#agregar');
-    const mensajeElement = $('#mensaje');
-    const verificarButton = $('#verificar');
-    if (combina.length === 0) {
-        console.log('No se encontró la combinación en la base de datos');
-        resultadoElement.text('No Aplica: Cliente no encontrado en la base de datos').removeClass('aplica').addClass('no-aplica').show();
-        agregarButton.prop('disabled', true);
-        verificarButton.prop('disabled', true);
-        mensajeElement.hide();
+                const resultadoElement = $('#resultado');
+                const agregarButton = $('#agregar');
+                const mensajeElement = $('#mensaje');
+                const verificarButton = $('#verificar');
+                if (combina.length === 0) {
+                    console.log('No se encontró la combinación en la base de datos');
+                    resultadoElement.text('No Aplica: Cliente no encontrado en la base de datos').removeClass('aplica').addClass('no-aplica').show();
+                    agregarButton.prop('disabled', true);
+                    verificarButton.prop('disabled', true);
+                    mensajeElement.hide();
 
-        // Aplicar clase highlight-background
-        $('#nombreNegocio').addClass('highlight-background');
-        $('#nombreCliente').addClass('highlight-background');
-        $('#tipoCluster').addClass('highlight-background');
-        $('#direccion').addClass('highlight-background');
-        return;
-    }
+                    // Aplicar clase highlight-background
+                    $('#nombreNegocio').addClass('highlight-background');
+                    $('#nombreCliente').addClass('highlight-background');
+                    $('#tipoCluster').addClass('highlight-background');
+                    $('#direccion').addClass('highlight-background');
+                    return;
+                }
 
-    const clienteData = combina[0];
-    $('#nombreNegocio').val(clienteData['Nombre_de_Cliente']);
-    $('#nombreCliente').val(clienteData['Nombre_de_Negocio']);
-    $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
-    $('#direccion').val(clienteData['Direccion']); // Mostrar la dirección
+                const clienteData = combina[0];
+                $('#nombreNegocio').val(clienteData['Nombre_de_Cliente']);
+                $('#nombreCliente').val(clienteData['Nombre_de_Negocio']);
+                $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
+                $('#direccion').val(clienteData['Direccion']); // Mostrar la dirección
 
-    if (clienteData['Tipo_de_Cluster'].toLowerCase() === 'mantener' || clienteData['Tipo_de_Cluster'].toLowerCase() === 'optimizar') {
-        $('#tipoCluster').addClass('highlight-background');
-    } else {
-        $('#tipoCluster').removeClass('highlight-background');
-    }
+                if (clienteData['Tipo_de_Cluster'].toLowerCase() === 'mantener' || clienteData['Tipo_de_Cluster'].toLowerCase() === 'optimizar') {
+                    $('#tipoCluster').addClass('highlight-background');
+                } else {
+                    $('#tipoCluster').removeClass('highlight-background');
+                }
 
-    // Remover clase highlight-background si aplica
-    $('#nombreNegocio').removeClass('highlight-background');
-    $('#nombreCliente').removeClass('highlight-background');
-    $('#tipoCluster').removeClass('highlight-background');
-    $('#direccion').removeClass('highlight-background');
+                // Remover clase highlight-background si aplica
+                $('#nombreNegocio').removeClass('highlight-background');
+                $('#nombreCliente').removeClass('highlight-background');
+                $('#tipoCluster').removeClass('highlight-background');
+                $('#direccion').removeClass('highlight-background');
 
-    resultadoElement.hide();
-    agregarButton.prop('disabled', true);
-    verificarButton.prop('disabled', false);
-    mensajeElement.hide();
-});
+                resultadoElement.hide();
+                agregarButton.prop('disabled', true);
+                verificarButton.prop('disabled', false);
+                mensajeElement.hide();
+            });
+
             $('#descargarExcel').on('click', function() {
                 if (clientesAgregados.length === 0) {
                     alert("No hay clientes agregados para descargar.");
