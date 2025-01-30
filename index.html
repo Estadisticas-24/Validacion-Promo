@@ -448,88 +448,88 @@
             function esCodigoRepetido(codigoCliente) {
                 return clientesAgregados.some(cliente => cliente.Codigo_Cliente === codigoCliente);
             }
-
             $('#agregar').on('click', function() {
-                const centro = $('#centro').val();
-                const jefeZona = $('#jefeZona').val();
-                const ruta = $('#ruta').val();
-                const cliente = $('#cliente').val();
-                const nombreNegocio = $('#nombreNegocio').val();
-                const nombreCliente = $('#nombreCliente').val();
-                const tipoCluster = $('#tipoCluster').val();
-                const direccion = $('#direccion').val();
-                const codigoCliente = cliente.slice(0, 13);
+    const centro = $('#centro').val();
+    const jefeZona = $('#jefeZona').val();
+    const ruta = $('#ruta').val();
+    const cliente = $('#cliente').val();
+    const nombreNegocio = $('#nombreNegocio').val();
+    const nombreCliente = $('#nombreCliente').val();
+    const tipoCluster = $('#tipoCluster').val();
+    const direccion = $('#direccion').val();
+    const codigoCliente = cliente.slice(0, 13);
 
-                if (esCodigoRepetido(codigoCliente)) {
-                    $('#mensajeRepetido').show();
-                    return;
-                }
+    if (esCodigoRepetido(codigoCliente)) {
+        $('#mensajeRepetido').show();
+        return;
+    }
 
-                $('#mensajeRepetido').hide();
+    $('#mensajeRepetido').hide();
 
-                const nuevoCliente = {
-                    Centro: centro,
-                    Jefe_Zona: jefeZona,
-                    Ruta: ruta,
-                    Codigo_Cliente: codigoCliente,
-                    Nombre_de_Cliente: nombreNegocio,
-                    Nombre_de_Negocio: nombreCliente,
-                    Tipo_de_Cluster: tipoCluster,
-                    Direccion: direccion
-                };
+    const nuevoCliente = {
+        Centro: centro,
+        Jefe_Zona: jefeZona,
+        Ruta: ruta,
+        Codigo_Cliente: codigoCliente,
+        Nombre_de_Cliente: nombreNegocio,
+        Nombre_de_Negocio: nombreCliente,
+        Tipo_de_Cluster: tipoCluster,
+        Direccion: direccion
+    };
 
-                const resultadoElement = $('#resultado');
-                if (resultadoElement.hasClass('no-aplica')) {
-                    $('#mensaje').show();
-                    return;
-                }
+    const resultadoElement = $('#resultado');
+    if (resultadoElement.hasClass('no-aplica')) {
+        $('#mensaje').show();
+        return;
+    }
 
-                clientesAgregados.push(nuevoCliente);
+    clientesAgregados.push(nuevoCliente);
 
-                const nuevaFila = `
-                    <tr>
-                        <td>${centro}</td>
-                        <td>${jefeZona}</td>
-                        <td>${ruta}</td>
-                        <td>${codigoCliente}</td>
-                        <td>${nombreNegocio}</td>
-                        <td>${nombreCliente}</td>
-                        <td class="${tipoCluster.toLowerCase() === 'mantener' || tipoCluster.toLowerCase() === 'optimizar' ? 'highlight-background' : ''}">${tipoCluster}</td>
-                        <td><button class="remove-button">Eliminar</button></td>
-                    </tr>
-                `;
+    const nuevaFila = `
+        <tr>
+            <td>${centro}</td>
+            <td>${jefeZona}</td>
+            <td>${ruta}</td>
+            <td>${codigoCliente}</td>
+            <td>${nombreNegocio}</td>
+            <td>${nombreCliente}</td>
+            <td class="${tipoCluster.toLowerCase() === 'mantener' || tipoCluster.toLowerCase() === 'optimizar' ? 'highlight-background' : ''}">${tipoCluster}</td>
+            <td><button class="remove-button">Eliminar</button></td>
+        </tr>
+    `;
 
-                $('#clientesAgregados tbody').append(nuevaFila);
+    $('#clientesAgregados tbody').append(nuevaFila);
 
-                $('.remove-button').last().on('click', function() {
-                    const index = $(this).closest('tr').index();
-                    clientesAgregados.splice(index, 1);
-                    $(this).closest('tr').remove();
-                    if (clientesAgregados.length === 0) {
-                        $('#descargarExcel').prop('disabled', true);
-                    }
-                    // Actualizar contador
-                    contadorPromorack--;
-                    $('#contadorPromorack').text(`: ${contadorPromorack}`);
-                    resetInputStyles();
-                });
+    $('.remove-button').last().on('click', function() {
+        const index = $(this).closest('tr').index();
+        clientesAgregados.splice(index, 1);
+        $(this).closest('tr').remove();
 
-                resetInputStyles();
+        // Si ya no hay clientes en la tabla, habilita el botón de Cambios nuevamente
+        if (clientesAgregados.length === 0) {
+            $('#tabCambios').prop('disabled', false);
+        }
+    });
 
-                $('#cliente').empty().append('<option value="">Selecciona un cliente</option>').prop('disabled', false).trigger('change');
-                $('#ruta').val('');
-                $('#nombreNegocio').val('');
-                $('#nombreCliente').val('');
-                $('#tipoCluster').val('');
-                $('#direccion').val('');
-                $('#resultado').hide();
-                $('#agregar').prop('disabled', true);
-                $('#verificar').prop('disabled', true);
-                $('#mensaje').hide();
+    resetInputStyles();
 
-                if (clientesAgregados.length > 0) {
-                    $('#descargarExcel').prop('disabled', false);
-                }
+    $('#cliente').empty().append('<option value="">Selecciona un cliente</option>').prop('disabled', false).trigger('change');
+    $('#ruta').val('');
+    $('#nombreNegocio').val('');
+    $('#nombreCliente').val('');
+    $('#tipoCluster').val('');
+    $('#direccion').val('');
+    $('#resultado').hide();
+    $('#agregar').prop('disabled', true);
+    $('#verificar').prop('disabled', true);
+    $('#mensaje').hide();
+
+    if (clientesAgregados.length > 0) {
+        $('#descargarExcel').prop('disabled', false);
+    }
+
+    // **Aquí desactivamos el botón de la pestaña de Cambios**
+    $('#tabCambios').prop('disabled', true);
 
                 // Actualizar contador
                 contadorPromorack++;
