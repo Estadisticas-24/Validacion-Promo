@@ -500,85 +500,15 @@
 
     $('#clientesAgregados tbody').append(nuevaFila);
 
-    // **Actualizar el contador de clientes**
-    actualizarContadorPromorack();
-
-    // **Desactivar el botón de la pestaña de Cambios**
-    $('#tabCambios').prop('disabled', true);
-
-    // **Función para eliminar clientes**
     $('.remove-button').last().on('click', function() {
         const index = $(this).closest('tr').index();
         clientesAgregados.splice(index, 1);
         $(this).closest('tr').remove();
 
         // Si ya no hay clientes en la tabla, habilita el botón de Cambios nuevamente
-        actualizarContadorPromorack();
-    });
-
-    resetInputStyles();
-
-    $('#cliente').empty().append('<option value="">Selecciona un cliente</option>').prop('disabled', false).trigger('change');
-    $('#ruta').val('');
-    $('#nombreNegocio').val('');
-    $('#nombreCliente').val('');
-    $('#tipoCluster').val('');
-    $('#direccion').val('');
-    $('#resultado').hide();
-    $('#agregar').prop('disabled', true);
-    $('#verificar').prop('disabled', true);
-    $('#mensaje').hide();
-
-    if (clientesAgregados.length > 0) {
-        $('#descargarExcel').prop('disabled', false);
-    }
-});
-
-/** 
- * Función para actualizar el contador de clientes agregados
- */
-function actualizarContadorPromorack() {
-    let totalClientes = clientesAgregados.length;
-    $('#contadorPromorack').text(`: ${totalClientes}`);
-
-    // Si no hay clientes, habilita la pestaña de Cambios
-    if (totalClientes === 0) {
-        $('#tabCambios').prop('disabled', false);
-        $('#descargarExcel').prop('disabled', true);
-    }
-}
-
-// **Vaciar tabla y resetear contador**
-$('#vaciarTablaPromorack').on('click', function() {
-    clientesAgregados = [];
-    $('#clientesAgregados tbody').empty();
-    $('#descargarExcel').prop('disabled', true);
-    
-    // **Actualizar el contador**
-    actualizarContadorPromorack();
-});
-
-// **Descargar Excel y resetear contador**
-$('#descargarExcel').on('click', function() {
-    if (clientesAgregados.length === 0) {
-        alert("No hay clientes agregados para descargar.");
-        return;
-    }
-
-    const clientesParaExcel = clientesAgregados.map(cliente => {
-        const { Direccion, ...clienteSinDireccion } = cliente;
-        return clienteSinDireccion;
-    });
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(clientesParaExcel);
-    XLSX.utils.book_append_sheet(wb, ws, "Clientes Agregados");
-    XLSX.writeFile(wb, "clientes_agregados.xlsx");
-
-    // **Vaciar la tabla y resetear el contador**
-    clientesAgregados = [];
-    $('#clientesAgregados tbody').empty();
-    actualizarContadorPromorack();
+        if (clientesAgregados.length === 0) {
+            $('#tabCambios').prop('disabled', false);
+        }
     });
 
     resetInputStyles();
@@ -605,7 +535,7 @@ $('#descargarExcel').on('click', function() {
                 contadorPromorack++;
                 $('#contadorPromorack').text(`: ${contadorPromorack}`);
                 cargarClientes();
-            };
+            });
 
             function cargarClientes() {
                 const selectedCentro = $('#centro').val();
@@ -719,7 +649,7 @@ $('#descargarExcel').on('click', function() {
                 contadorPromorack = 0;
                 $('#contadorPromorack').text(`: ${contadorPromorack}`);
             });
-        
+        }
 
         function cargarDatosCambios(cambiosData, clientesSegmentacion, restricciones) {
             const centros = [...new Set(cambiosData.map(item => item.Centro))];
