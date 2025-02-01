@@ -532,8 +532,9 @@
     $('#tabCambios').prop('disabled', true);
 
                 // Actualizar contador
-                contadorPromorack++;
-                $('#contadorPromorack').text(`: ${contadorPromorack}`);
+                contadorPromorack = $('#clientesAgregados tbody tr').length; 
+$('#contadorPromorack').text(`: ${contadorPromorack}`);
+
                 cargarClientes();
             });
 
