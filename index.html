@@ -504,6 +504,10 @@
         const index = $(this).closest('tr').index();
         clientesAgregados.splice(index, 1);
         $(this).closest('tr').remove();
+        
+         // Actualiza el contador basado en la cantidad actual de filas en la tabla
+    contadorPromorack = $('#clientesAgregados tbody tr').length;
+    $('#contadorPromorack').text(`: ${contadorPromorack}`);
 
         // Si ya no hay clientes en la tabla, habilita el botón de Cambios nuevamente
         if (clientesAgregados.length === 0) {
