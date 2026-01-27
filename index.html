@@ -277,15 +277,12 @@
             try {
                 const responseClientes = await fetch('clientes_segmentacion.json');
                 const clientesSegmentacion = await responseClientes.json();
-                console.log("Clientes Segmentacion cargados:", clientesSegmentacion);
 
                 const responseCambios = await fetch('cambios.json');
                 const cambiosData = await responseCambios.json();
-                console.log("Cambios cargados:", cambiosData);
 
                 const responseRestricciones = await fetch('restricciones.json');
                 const restricciones = await responseRestricciones.json();
-                console.log("Restricciones cargadas:", restricciones);
 
                 cargarDatosPromorack(clientesSegmentacion, restricciones);
                 cargarDatosCambios(cambiosData, clientesSegmentacion, restricciones);
@@ -296,16 +293,12 @@
 
         function cargarDatosPromorack(clientesSegmentacion, restricciones) {
             const centros = [...new Set(clientesSegmentacion.map(item => item.Centro))];
-            console.log("Centros:", centros);
             const centroSelect = $('#centro');
-            centros.forEach(centro => {
-                const option = new Option(centro, centro);
-                centroSelect.append(option);
-            });
+
+            centros.forEach(centro => centroSelect.append(new Option(centro, centro)));
 
             centroSelect.select2().on('change', function() {
                 const selectedCentro = $(this).val();
-                console.log("Centro seleccionado:", selectedCentro);
                 const jefeZonaSelect = $('#jefeZona');
 
                 jefeZonaSelect.empty().append('<option value="">Selecciona un jefe de zona</option>');
@@ -317,12 +310,8 @@
                     const jefesZona = [...new Set(clientesSegmentacion
                         .filter(item => item.Centro === selectedCentro)
                         .map(item => item.Jefe_Zona))];
-                    console.log("Jefes de Zona encontrados:", jefesZona);
-                    jefesZona.forEach(jefeZona => {
-                        const option = new Option(jefeZona, jefeZona);
-                        jefeZonaSelect.append(option);
-                    });
 
+                    jefesZona.forEach(j => jefeZonaSelect.append(new Option(j, j)));
                     jefeZonaSelect.prop('disabled', false).select2();
                 }
             });
@@ -330,7 +319,6 @@
             $('#jefeZona').select2().on('change', function() {
                 const selectedCentro = $('#centro').val();
                 const selectedJefeZona = $(this).val();
-                console.log("Jefe de Zona seleccionado:", selectedJefeZona);
                 const clienteSelect = $('#cliente');
 
                 clienteSelect.empty().append('<option value="">Selecciona un cliente</option>');
@@ -341,11 +329,8 @@
                     const clientes = [...new Set(clientesSegmentacion
                         .filter(item => item.Centro === selectedCentro && item.Jefe_Zona === selectedJefeZona)
                         .map(item => item.Codigo_Cliente_HTML))];
-                    console.log("Clientes encontrados:", clientes);
-                    clientes.forEach(cliente => {
-                        const option = new Option(cliente, cliente);
-                        clienteSelect.append(option);
-                    });
+
+                    clientes.forEach(c => clienteSelect.append(new Option(c, c)));
 
                     clienteSelect.prop('disabled', false).select2();
                     $('#agregar').prop('disabled', true);
@@ -353,32 +338,46 @@
                 }
             });
 
+            // --------- ÚNICO handler de cambio de cliente (sin duplicados) ---------
             $('#cliente').select2().on('change', function() {
                 const selectedCentro = $('#centro').val();
                 const selectedJefeZona = $('#jefeZona').val();
                 const selectedCliente = $(this).val();
+
+                if (!selectedCliente) {
+                    $('#ruta').val('');
+                    $('#nombreNegocio').val('');
+                    $('#nombreCliente').val('');
+                    $('#tipoCluster').val('');
+                    $('#direccion').val('');
+                    $('#resultado').hide();
+                    $('#agregar').prop('disabled', true);
+                    $('#verificar').prop('disabled', true);
+                    $('#mensaje').hide();
+                    resetInputStyles();
+                    return;
+                }
+
                 const selectedClienteTruncado = selectedCliente.slice(0, 13);
-                console.log("Cliente seleccionado:", selectedCliente);
 
                 const combina = clientesSegmentacion.filter(item => 
                     item.Centro === selectedCentro && 
                     item.Jefe_Zona === selectedJefeZona &&
                     item.Codigo_Cliente_HTML.slice(0, 13) === selectedClienteTruncado
                 );
-                console.log("Combinación encontrada:", combina);
 
                 const resultadoElement = $('#resultado');
                 const agregarButton = $('#agregar');
                 const mensajeElement = $('#mensaje');
                 const verificarButton = $('#verificar');
+
                 if (combina.length === 0) {
-                    console.log('No se encontró la combinación en la base de datos');
-                    resultadoElement.text('No Aplica: Cliente no encontrado en la base de datos').removeClass('aplica').addClass('no-aplica').show();
+                    resultadoElement.text('No Aplica: Cliente no encontrado en la base de datos')
+                        .removeClass('aplica').addClass('no-aplica').show();
                     agregarButton.prop('disabled', true);
                     verificarButton.prop('disabled', true);
                     mensajeElement.hide();
 
-                    // Aplicar clase highlight-background
                     $('#nombreNegocio').addClass('highlight-background');
                     $('#nombreCliente').addClass('highlight-background');
                     $('#tipoCluster').addClass('highlight-background');
@@ -387,23 +386,39 @@
                 }
 
                 const clienteData = combina[0];
+
+                // Cargar campos base
                 $('#ruta').val(clienteData['Ruta']);
                 $('#nombreNegocio').val(clienteData['Nombre_de_Cliente']);
                 $('#nombreCliente').val(clienteData['Nombre_de_Negocio']);
-                $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
-                $('#direccion').val(clienteData['Direccion']); // Mostrar la dirección
+                $('#direccion').val(clienteData['Direccion']);
 
-                if (clienteData['Tipo_de_Cluster'].toLowerCase() === 'mantener' || clienteData['Tipo_de_Cluster'].toLowerCase() === 'optimizar') {
-                    $('#tipoCluster').addClass('highlight-background');
+                // Detectar si tiene restricción "Razón Social"
+                const restr = restricciones.find(r => r.Codigo === selectedClienteTruncado);
+                const esRazonSocial = restr && (restr.No_Aplica_Por || "").toLowerCase().includes("razón social");
+
+                // Si es Razón Social, en tipoCluster debe verse SOLO "Razón Social"
+                if (esRazonSocial) {
+                    $('#tipoCluster').val('Razón Social');
                 } else {
-                    $('#tipoCluster').removeClass('highlight-background');
+                    $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
                 }
 
-                // Remover clase highlight-background si aplica
-                $('#nombreNegocio').removeClass('highlight-background');
-                $('#nombreCliente').removeClass('highlight-background');
-                $('#tipoCluster').removeClass('highlight-background');
-                $('#direccion').removeClass('highlight-background');
+                // Resaltado: mantener/optimizar O Razón Social
+                const cluster = (clienteData['Tipo_de_Cluster'] || "").toLowerCase();
+                const esMantOpt = (cluster === 'mantener' || cluster === 'optimizar');
+
+                resetInputStyles();
+
+                if (esMantOpt || esRazonSocial) {
+                    $('#tipoCluster').addClass('highlight-background');
+                }
+
+                if (esRazonSocial) {
+                    $('#nombreNegocio').addClass('highlight-background');
+                    $('#nombreCliente').addClass('highlight-background');
+                    $('#direccion').addClass('highlight-background');
+                }
 
                 resultadoElement.hide();
                 agregarButton.prop('disabled', true);
@@ -413,8 +428,9 @@
 
             $('#verificar').on('click', function() {
                 const selectedCliente = $('#cliente').val();
+                if (!selectedCliente) return;
+
                 const selectedClienteTruncado = selectedCliente.slice(0, 13);
-                console.log("Verificando restricciones para Cliente:", selectedCliente);
 
                 const restriccionesCliente = restricciones.find(item => item.Codigo === selectedClienteTruncado);
                 const resultadoElement = $('#resultado');
@@ -422,26 +438,29 @@
                 const mensajeElement = $('#mensaje');
 
                 if (restriccionesCliente) {
-                    console.log('Restricción encontrada para el cliente:', restriccionesCliente);
-                    resultadoElement.text('No Aplica: ' + restriccionesCliente.No_Aplica_Por).removeClass('aplica').addClass('no-aplica').show();
+                    resultadoElement.text('No Aplica: ' + restriccionesCliente.No_Aplica_Por)
+                        .removeClass('aplica').addClass('no-aplica').show();
                     agregarButton.prop('disabled', true);
                     mensajeElement.show();
 
-                    // Aplicar clase highlight-background
+                    // Resaltar siempre si hay restricción
                     $('#nombreNegocio').addClass('highlight-background');
                     $('#nombreCliente').addClass('highlight-background');
                     $('#tipoCluster').addClass('highlight-background');
                     $('#direccion').addClass('highlight-background');
+
+                    // Si la restricción incluye Razón Social, forzar el campo a "Razón Social"
+                    const esRazonSocial = (restriccionesCliente.No_Aplica_Por || "").toLowerCase().includes("razón social");
+                    if (esRazonSocial) {
+                        $('#tipoCluster').val('Razón Social');
+                    }
                 } else {
                     resultadoElement.text('Aplica').removeClass('no-aplica').addClass('aplica').show();
                     agregarButton.prop('disabled', false);
                     mensajeElement.hide();
 
-                    // Remover clase highlight-background si aplica
-                    $('#nombreNegocio').removeClass('highlight-background');
-                    $('#nombreCliente').removeClass('highlight-background');
-                    $('#tipoCluster').removeClass('highlight-background');
-                    $('#direccion').removeClass('highlight-background');
+                    // Quitar resaltado
+                    resetInputStyles();
                 }
             });
 
@@ -454,9 +473,12 @@
                 const jefeZona = $('#jefeZona').val();
                 const ruta = $('#ruta').val();
                 const cliente = $('#cliente').val();
+
+                if (!cliente) return;
+
                 const nombreNegocio = $('#nombreNegocio').val();
                 const nombreCliente = $('#nombreCliente').val();
-                const tipoCluster = $('#tipoCluster').val();
+                const tipoClusterActual = $('#tipoCluster').val(); // puede ser "Razón Social"
                 const direccion = $('#direccion').val();
                 const codigoCliente = cliente.slice(0, 13);
 
@@ -464,8 +486,20 @@
                     $('#mensajeRepetido').show();
                     return;
                 }
-
                 $('#mensajeRepetido').hide();
+
+                const resultadoElement = $('#resultado');
+                if (resultadoElement.hasClass('no-aplica')) {
+                    $('#mensaje').show();
+                    return;
+                }
+
+                // Detectar Razón Social por restricciones (para pintar y para mostrar)
+                const restr = restricciones.find(r => r.Codigo === codigoCliente);
+                const esRazonSocial = restr && (restr.No_Aplica_Por || "").toLowerCase().includes("razón social");
+
+                // Valor a mostrar en la columna "Acción" (la tuya realmente es el cluster/estado)
+                const valorAccion = esRazonSocial ? 'Razón Social' : (tipoClusterActual || '');
 
                 const nuevoCliente = {
                     Centro: centro,
@@ -474,17 +508,15 @@
                     Codigo_Cliente: codigoCliente,
                     Nombre_de_Cliente: nombreNegocio,
                     Nombre_de_Negocio: nombreCliente,
-                    Tipo_de_Cluster: tipoCluster,
+                    Tipo_de_Cluster: valorAccion,
                     Direccion: direccion
                 };
 
-                const resultadoElement = $('#resultado');
-                if (resultadoElement.hasClass('no-aplica')) {
-                    $('#mensaje').show();
-                    return;
-                }
-
                 clientesAgregados.push(nuevoCliente);
+
+                // Determinar resaltado para la celda de acción
+                const t = (valorAccion || '').toLowerCase();
+                const resaltarAccion = (t === 'mantener' || t === 'optimizar' || t === 'razón social');
 
                 const nuevaFila = `
                     <tr>
@@ -494,7 +526,7 @@
                         <td>${codigoCliente}</td>
                         <td>${nombreNegocio}</td>
                         <td>${nombreCliente}</td>
-                        <td class="${tipoCluster.toLowerCase() === 'mantener' || tipoCluster.toLowerCase() === 'optimizar' ? 'highlight-background' : ''}">${tipoCluster}</td>
+                        <td class="${resaltarAccion ? 'highlight-background' : ''}">${valorAccion}</td>
                         <td><button class="remove-button">Eliminar</button></td>
                     </tr>
                 `;
@@ -508,7 +540,6 @@
                     if (clientesAgregados.length === 0) {
                         $('#descargarExcel').prop('disabled', true);
                     }
-                    // Actualizar contador
                     contadorPromorack--;
                     $('#contadorPromorack').text(`: ${contadorPromorack}`);
                     resetInputStyles();
@@ -516,7 +547,8 @@
 
                 resetInputStyles();
 
-                $('#cliente').empty().append('<option value="">Selecciona un cliente</option>').prop('disabled', false).trigger('change');
+                // Reset form
+                $('#cliente').val('').trigger('change');
                 $('#ruta').val('');
                 $('#nombreNegocio').val('');
                 $('#nombreCliente').val('');
@@ -531,90 +563,8 @@
                     $('#descargarExcel').prop('disabled', false);
                 }
 
-                // Actualizar contador
                 contadorPromorack++;
                 $('#contadorPromorack').text(`: ${contadorPromorack}`);
-                cargarClientes();
-            });
-
-            function cargarClientes() {
-                const selectedCentro = $('#centro').val();
-                const selectedJefeZona = $('#jefeZona').val();
-                const clienteSelect = $('#cliente');
-
-                if (selectedCentro && selectedJefeZona) {
-                    const clientes = [...new Set(clientesSegmentacion
-                        .filter(item => item.Centro === selectedCentro && item.Jefe_Zona === selectedJefeZona)
-                        .map(item => item.Codigo_Cliente_HTML))];
-                    console.log("Clientes encontrados:", clientes);
-                    clienteSelect.empty().append('<option value="">Selecciona un cliente</option>');
-                    clientes.forEach(cliente => {
-                        const option = new Option(cliente, cliente);
-                        clienteSelect.append(option);
-                    });
-
-                    clienteSelect.prop('disabled', false).select2();
-                    $('#agregar').prop('disabled', true);
-                    $('#verificar').prop('disabled', true);
-                }
-            }
-
-            $('#cliente').select2().on('change', function() {
-                const selectedCentro = $('#centro').val();
-                const selectedJefeZona = $('#jefeZona').val();
-                const selectedCliente = $(this).val();
-                const selectedClienteTruncado = selectedCliente.slice(0, 13);
-                console.log("Cliente seleccionado:", selectedCliente);
-
-                const combina = clientesSegmentacion.filter(item => 
-                    item.Centro === selectedCentro && 
-                    item.Jefe_Zona === selectedJefeZona &&
-                    item.Codigo_Cliente_HTML.slice(0, 13) === selectedClienteTruncado
-                );
-                console.log("Combinación encontrada:", combina);
-
-                const resultadoElement = $('#resultado');
-                const agregarButton = $('#agregar');
-                const mensajeElement = $('#mensaje');
-                const verificarButton = $('#verificar');
-                if (combina.length === 0) {
-                    console.log('No se encontró la combinación en la base de datos');
-                    resultadoElement.text('No Aplica: Cliente no encontrado en la base de datos').removeClass('aplica').addClass('no-aplica').show();
-                    agregarButton.prop('disabled', true);
-                    verificarButton.prop('disabled', true);
-                    mensajeElement.hide();
-
-                    // Aplicar clase highlight-background
-                    $('#nombreNegocio').addClass('highlight-background');
-                    $('#nombreCliente').addClass('highlight-background');
-                    $('#tipoCluster').addClass('highlight-background');
-                    $('#direccion').addClass('highlight-background');
-                    return;
-                }
-
-                const clienteData = combina[0];
-                $('#ruta').val(clienteData['Ruta']);
-                $('#nombreNegocio').val(clienteData['Nombre_de_Cliente']);
-                $('#nombreCliente').val(clienteData['Nombre_de_Negocio']);
-                $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
-                $('#direccion').val(clienteData['Direccion']); // Mostrar la dirección
-
-                if (clienteData['Tipo_de_Cluster'].toLowerCase() === 'mantener' || clienteData['Tipo_de_Cluster'].toLowerCase() === 'optimizar') {
-                    $('#tipoCluster').addClass('highlight-background');
-                } else {
-                    $('#tipoCluster').removeClass('highlight-background');
-                }
-
-                // Remover clase highlight-background si aplica
-                $('#nombreNegocio').removeClass('highlight-background');
-                $('#nombreCliente').removeClass('highlight-background');
-                $('#tipoCluster').removeClass('highlight-background');
-                $('#direccion').removeClass('highlight-background');
-
-                resultadoElement.hide();
-                agregarButton.prop('disabled', true);
-                verificarButton.prop('disabled', false);
-                mensajeElement.hide();
             });
 
             $('#descargarExcel').on('click', function() {
@@ -637,7 +587,6 @@
                 $('#clientesAgregados tbody').empty();
                 $('#descargarExcel').prop('disabled', true);
 
-                // Reiniciar contador
                 contadorPromorack = 0;
                 $('#contadorPromorack').text(`: ${contadorPromorack}`);
             });
@@ -653,16 +602,11 @@
 
         function cargarDatosCambios(cambiosData, clientesSegmentacion, restricciones) {
             const centros = [...new Set(cambiosData.map(item => item.Centro))];
-            console.log("Centros Cambios:", centros);
             const centroSelect = $('#centroCambios');
-            centros.forEach(centro => {
-                const option = new Option(centro, centro);
-                centroSelect.append(option);
-            });
+            centros.forEach(c => centroSelect.append(new Option(c, c)));
 
             centroSelect.select2().on('change', function() {
                 const selectedCentro = $(this).val();
-                console.log("Centro Cambios seleccionado:", selectedCentro);
                 const jefeZonaSelect = $('#jefeZonaCambios');
 
                 jefeZonaSelect.empty().append('<option value="">Selecciona un jefe de zona</option>');
@@ -674,12 +618,8 @@
                     const jefesZona = [...new Set(cambiosData
                         .filter(item => item.Centro === selectedCentro)
                         .map(item => item.Jefe_Zona))];
-                    console.log("Jefes de Zona Cambios encontrados:", jefesZona);
-                    jefesZona.forEach(jefeZona => {
-                        const option = new Option(jefeZona, jefeZona);
-                        jefeZonaSelect.append(option);
-                    });
 
+                    jefesZona.forEach(j => jefeZonaSelect.append(new Option(j, j)));
                     jefeZonaSelect.prop('disabled', false).select2();
                 }
             });
@@ -687,7 +627,6 @@
             $('#jefeZonaCambios').select2().on('change', function() {
                 const selectedCentro = $('#centroCambios').val();
                 const selectedJefeZona = $(this).val();
-                console.log("Jefe de Zona Cambios seleccionado:", selectedJefeZona);
                 const clienteSelect = $('#clienteCambios');
 
                 clienteSelect.empty().append('<option value="">Selecciona un cliente</option>').prop('disabled', true);
@@ -706,12 +645,7 @@
                             .map(item => item.Codigo_Cliente_HTML))];
                     }
 
-                    console.log("Clientes Cambios encontrados:", clientes);
-                    clientes.forEach(cliente => {
-                        const option = new Option(cliente, cliente);
-                        clienteSelect.append(option);
-                    });
-
+                    clientes.forEach(c => clienteSelect.append(new Option(c, c)));
                     clienteSelect.prop('disabled', false).select2();
                     $('#verificarCambios').prop('disabled', true);
                     $('#agregarCambios').prop('disabled', true);
@@ -722,6 +656,15 @@
                 const selectedCentro = $('#centroCambios').val();
                 const selectedJefeZona = $('#jefeZonaCambios').val();
                 const selectedCliente = $(this).val();
+
+                if (!selectedCliente) {
+                    $('#rutaCambios').val('');
+                    $('#resultadoCambios').hide();
+                    $('#verificarCambios').prop('disabled', true);
+                    $('#agregarCambios').prop('disabled', true);
+                    return;
+                }
+
                 const selectedClienteTruncado = selectedCliente.slice(0, 13);
 
                 if (estadoBoton === 'Activar') {
@@ -731,7 +674,6 @@
                 }
                 $('#resultadoCambios').hide();
 
-                // Obtener datos del cliente para mostrarlos
                 let clienteData;
                 if (estadoBoton === 'Desactivar') {
                     clienteData = cambiosData.find(item => item.Codigo_Cliente_HTML.slice(0, 13) === selectedClienteTruncado);
@@ -743,19 +685,16 @@
                     );
                 }
                 
-                if (clienteData) {
-                    $('#rutaCambios').val(clienteData['Ruta']);
-                } else {
-                    $('#rutaCambios').val('');
-                }
+                $('#rutaCambios').val(clienteData ? clienteData['Ruta'] : '');
             });
 
             $('#verificarCambios').on('click', function() {
                 const selectedCentro = $('#centroCambios').val();
                 const selectedJefeZona = $('#jefeZonaCambios').val();
                 const selectedCliente = $('#clienteCambios').val();
+                if (!selectedCliente) return;
+
                 const selectedClienteTruncado = selectedCliente.slice(0, 13);
-                console.log("Cliente Cambios seleccionado:", selectedCliente);
 
                 let combina = [];
                 if (estadoBoton === 'Desactivar') {
@@ -772,15 +711,13 @@
                     );
                 }
 
-                console.log("Combinación Cambios encontrada:", combina);
-
                 const resultadoElement = $('#resultadoCambios');
                 const agregarButton = $('#agregarCambios');
                 const mensajeElement = $('#mensajeCambios');
 
                 if (combina.length === 0) {
-                    console.log('No se encontró la combinación en la base de datos');
-                    resultadoElement.text('No Aplica: Cliente no encontrado en la base de datos').removeClass('aplica').addClass('no-aplica').show();
+                    resultadoElement.text('No Aplica: Cliente no encontrado en la base de datos')
+                        .removeClass('aplica').addClass('no-aplica').show();
                     agregarButton.prop('disabled', true);
                     mensajeElement.hide();
                     return;
@@ -789,8 +726,8 @@
                 if (estadoBoton === 'Activar') {
                     const restriccionesCliente = restricciones.find(item => item.Codigo === selectedClienteTruncado);
                     if (restriccionesCliente) {
-                        console.log('Restricción encontrada para el cliente:', restriccionesCliente);
-                        resultadoElement.text('No Aplica: ' + restriccionesCliente.No_Aplica_Por).removeClass('aplica').addClass('no-aplica').show();
+                        resultadoElement.text('No Aplica: ' + restriccionesCliente.No_Aplica_Por)
+                            .removeClass('aplica').addClass('no-aplica').show();
                         agregarButton.prop('disabled', true);
                         mensajeElement.show();
                         return;
@@ -807,6 +744,8 @@
                 const jefeZona = $('#jefeZonaCambios').val();
                 const ruta = $('#rutaCambios').val();
                 const cliente = $('#clienteCambios').val();
+                if (!cliente) return;
+
                 const selectedClienteTruncado = cliente.slice(0, 13);
 
                 let clienteData = {};
@@ -853,9 +792,7 @@
 
                 $('.remove-button').last().on('click', function() {
                     const index = $(this).closest('tr').index();
-                    // Remover el cliente a activar junto con el de desactivar
                     if (estadoBoton === 'Activar') {
-                        const codigoClienteDesactivar = clientesAgregados[index].Codigo_Cliente;
                         clientesAgregados = clientesAgregados.filter((_, i) => i !== index && i !== index - 1);
                         $(this).closest('tr').prev().remove();
                         $(this).closest('tr').remove();
@@ -867,10 +804,8 @@
                     if (clientesAgregados.length === 0) {
                         $('#descargarExcelCambios').prop('disabled', true);
                     }
-                    // Actualizar contador
                     contadorCambios--;
                     $('#contadorCambios').text(`: ${Math.ceil(contadorCambios / 2)}`);
-                    resetInputStylesCambios();
                 });
 
                 if (estadoBoton === 'Desactivar') {
@@ -893,7 +828,6 @@
                     $('#descargarExcelCambios').prop('disabled', false);
                 }
 
-                // Actualizar contador
                 contadorCambios++;
                 $('#contadorCambios').text(`: ${Math.ceil(contadorCambios / 2)}`);
             });
@@ -913,7 +847,6 @@
                 $('#clientesAgregados tbody').empty();
                 $('#descargarExcelCambios').prop('disabled', true);
 
-                // Reiniciar contador
                 contadorCambios = 0;
                 $('#contadorCambios').text(`: ${contadorCambios}`);
             });
@@ -934,10 +867,6 @@
             $('#direccion').removeClass('highlight-background').css('background-color', 'white');
         }
 
-        function resetInputStylesCambios() {
-            $('#rutaCambios').val('');
-        }
-
         function resetCambiosForm() {
             $('#centroCambios').val('').trigger('change');
             $('#jefeZonaCambios').empty().append('<option value="">Selecciona un jefe de zona</option>').prop('disabled', true).trigger('change');
@@ -950,9 +879,7 @@
         }
 
         function disableFields(fields) {
-            fields.forEach(field => {
-                $(field).prop('disabled', true);
-            });
+            fields.forEach(field => $(field).prop('disabled', true));
         }
 
         $(document).ready(function() {
