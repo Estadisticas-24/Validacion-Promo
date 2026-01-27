@@ -398,11 +398,9 @@
                 const esRazonSocial = restr && (restr.No_Aplica_Por || "").toLowerCase().includes("razón social");
 
                 // Si es Razón Social, en tipoCluster debe verse SOLO "Razón Social"
-                if (esRazonSocial) {
-                    $('#tipoCluster').val('Razón Social');
-                } else {
-                    $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
-                }
+                // Tipo de Cluster: SIEMPRE mostrar el cluster real
+                $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
+
 
                 // Resaltado: mantener/optimizar O Razón Social
                 const cluster = (clienteData['Tipo_de_Cluster'] || "").toLowerCase();
@@ -449,6 +447,11 @@
                     $('#tipoCluster').addClass('highlight-background');
                     $('#direccion').addClass('highlight-background');
 
+                    // Si la restricción incluye Razón Social, forzar el campo a "Razón Social"
+                    const esRazonSocial = (restriccionesCliente.No_Aplica_Por || "").toLowerCase().includes("razón social");
+                    if (esRazonSocial) {
+                        $('#tipoCluster').val('Razón Social');
+                    }
                 } else {
                     resultadoElement.text('Aplica').removeClass('no-aplica').addClass('aplica').show();
                     agregarButton.prop('disabled', false);
