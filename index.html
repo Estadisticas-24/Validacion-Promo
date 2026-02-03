@@ -278,18 +278,51 @@
 
         async function loadData() {
             try {
-                const responseClientes = await fetch('clientes_segmentacion.json');
+                // Carga con validación de status para detectar 404/CORS rápidamente
+                const responseClientes = await fetch('clientes_segmentacion.json', { cache: 'no-store' });
+                if (!responseClientes.ok) throw new Error('clientes_segmentacion.json -> ' + responseClientes.status + ' ' + responseClientes.statusText);
                 const clientesSegmentacion = await responseClientes.json();
 
-                const responseCambios = await fetch('cambios.json');
+                const responseCambios = await fetch('cambios.json', { cache: 'no-store' });
+                if (!responseCambios.ok) throw new Error('cambios.json -> ' + responseCambios.status + ' ' + responseCambios.statusText);
                 const cambiosData = await responseCambios.json();
 
-                const responseRestricciones = await fetch('restricciones.json');
+                const responseRestricciones = await fetch('restricciones.json', { cache: 'no-store' });
+                if (!responseRestricciones.ok) throw new Error('restricciones.json -> ' + responseRestricciones.status + ' ' + responseRestricciones.statusText);
                 const restricciones = await responseRestricciones.json();
+
+                console.log('[OK] JSON cargados:', {
+                    clientes_segmentacion: Array.isArray(clientesSegmentacion) ? clientesSegmentacion.length : 'no-array',
+                    cambios: Array.isArray(cambiosData) ? cambiosData.length : 'no-array',
+                    restricciones: Array.isArray(restricciones) ? restricciones.length : 'no-array'
+                });
 
                 cargarDatosPromorack(clientesSegmentacion, restricciones);
                 cargarDatosCambios(cambiosData, clientesSegmentacion, restricciones);
             } catch (error) {
+                console.error('Error loading data:', error);
+
+                // Mensaje visible (sin romper UI)
+                const msg = 'No se pudieron cargar los JSON.
+
+' +
+                            '1) Asegúrate de abrir el HTML desde un servidor (no con doble click).
+' +
+                            '   - Python: python -m http.server 8000
+' +
+                            '   - Luego: http://localhost:8000/
+
+' +
+                            '2) Verifica que los archivos estén en la misma carpeta y con estos nombres exactos:
+' +
+                            '   clientes_segmentacion.json, cambios.json, restricciones.json
+
+' +
+                            'Detalle técnico: ' + (error && error.message ? error.message : error);
+
+                alert(msg);
+            }
+        } catch (error) {
                 console.error('Error loading data:', error);
             }
         }
@@ -654,10 +687,7 @@ $('#resultado').hide();
                     return;
                 }
 
-                const clientesParaExcel = clientesAgregados.map(cliente => {
-                    const { Direccion, ...clienteSinDireccion } = cliente;
-                    return clienteSinDireccion;
-                });
+                const clientesParaExcel = clientesAgregados;
 
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.json_to_sheet(clientesParaExcel);
