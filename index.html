@@ -413,15 +413,49 @@
                 const restr = restricciones.find(r => r.Codigo === selectedClienteTruncado);
                 const esRazonSocial = restr && (restr.No_Aplica_Por || "").toLowerCase().includes("razón social");
 
-                // Si es Razón Social, en tipoCluster debe verse SOLO "Razón Social"
-                // Tipo de Cluster: SIEMPRE mostrar el cluster real
-                $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
+                // 🔒 Salvaguarda: Mantener/Optimizar + Razón Social => NO agregar
+                const clusterReal = (clusterRawActual || '').toLowerCase();
+                const esMantOptReal = (clusterReal === 'mantener' || clusterReal === 'optimizar');
+                if (esRazonSocial && esMantOptReal) {
+                    $('#resultado')
+                        .text('No Aplica: Razón Social (bloqueado por Mantener/Optimizar)')
+                        .removeClass('aplica').addClass('no-aplica').show();
+                    $('#agregar').prop('disabled', true);
+                    $('#verificar').prop('disabled', true);
+                    $('#mensaje').show();
+                    return;
+                }
 
-
-                // Resaltado: mantener/optimizar O Razón Social
+                // Tipo de Cluster: si es Razón Social, mostrar "Razón Social"; si no, mostrar el cluster real
                 const cluster = (clienteData['Tipo_de_Cluster'] || "").toLowerCase();
                 const esMantOpt = (cluster === 'mantener' || cluster === 'optimizar');
 
+                if (esRazonSocial) {
+                    $('#tipoCluster').val('Razón Social');
+                } else {
+                    $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
+                }
+
+                // 🚫 BLOQUEO inmediato: Mantener/Optimizar + Razón Social => NO permitir acciones
+                if (esRazonSocial && esMantOpt) {
+                    resultadoElement
+                        .text('No Aplica: Razón Social (bloqueado por Mantener/Optimizar)')
+                        .removeClass('aplica').addClass('no-aplica').show();
+
+                    allowAgregarPromorack = false;
+                    accionOverridePromorack = null;
+
+                    agregarButton.prop('disabled', true);
+                    verificarButton.prop('disabled', true);
+                    mensajeElement.show();
+
+                    $('#nombreNegocio').addClass('highlight-background');
+                    $('#nombreCliente').addClass('highlight-background');
+                    $('#tipoCluster').addClass('highlight-background');
+                    $('#direccion').addClass('highlight-background');
+
+                    return;
+                }
                 resetInputStyles();
 
                 if (esMantOpt || esRazonSocial) {
@@ -473,41 +507,31 @@
                     //    - En otros casos -> NO se permite agregar.
 
                     if (esRazonSocial) {
-                        if (esMantOpt) {
-                            resultadoElement
-                                .text('Aplica: Sujeto a autorización de dirección comercial')
-                                .removeClass('no-aplica').addClass('aplica').show();
+                        // 🔒 Razón Social SIEMPRE bloquea (aunque sea Mantener/Optimizar)
+                        resultadoElement
+                            .text('No Aplica: Razón Social')
+                            .removeClass('aplica').addClass('no-aplica').show();
 
-                            allowAgregarPromorack = true;
-                            accionOverridePromorack = 'Sujeto a autorización de dirección comercial';
+                        allowAgregarPromorack = false;
+                        accionOverridePromorack = null;
 
-                            // Mantener resaltado de campos sensibles por Razón Social
-                            $('#nombreNegocio').addClass('highlight-background');
-                            $('#nombreCliente').addClass('highlight-background');
-                            $('#tipoCluster').addClass('highlight-background');
-                            $('#direccion').addClass('highlight-background');
+                        agregarButton.prop('disabled', true);
+                        mensajeElement.show();
 
-                            agregarButton.prop('disabled', false);
-                            mensajeElement.hide();
-                        } else {
-                            resultadoElement
-                                .text('No Aplica: ' + motivo)
-                                .removeClass('aplica').addClass('no-aplica').show();
+                        // Bloquear acciones
+                        $('#agregar').prop('disabled', true);
+                        $('#verificar').prop('disabled', true);
 
-                            allowAgregarPromorack = false;
-                            agregarButton.prop('disabled', true);
+                        // Forzar visual
+                        $('#tipoCluster').val('Razón Social');
 
-                            mensajeElement.show();
+                        // Resaltar
+                        $('#nombreNegocio').addClass('highlight-background');
+                        $('#nombreCliente').addClass('highlight-background');
+                        $('#tipoCluster').addClass('highlight-background');
+                        $('#direccion').addClass('highlight-background');
 
-                            // Resaltar siempre si hay restricción
-                            $('#nombreNegocio').addClass('highlight-background');
-                            $('#nombreCliente').addClass('highlight-background');
-                            $('#tipoCluster').addClass('highlight-background');
-                            $('#direccion').addClass('highlight-background');
-
-                            // Forzar el campo a "Razón Social" cuando aplique
-                            $('#tipoCluster').val('Razón Social');
-                        }
+                        return;
                     } else {
                         if (esMantOpt) {
                             resultadoElement
