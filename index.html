@@ -418,7 +418,7 @@
                 const esMantOptReal = (clusterReal === 'mantener' || clusterReal === 'optimizar');
                 if (esRazonSocial && esMantOptReal) {
                     $('#resultado')
-                        .text('No Aplica: Razón Social (bloqueado por Mantener/Optimizar)')
+                        .text('No Aplica: Razón Social')
                         .removeClass('aplica').addClass('no-aplica').show();
                     $('#agregar').prop('disabled', true);
                     $('#verificar').prop('disabled', true);
