@@ -206,9 +206,6 @@
         <label for="tipoCluster">Tipo de Cluster:</label>
         <input type="text" id="tipoCluster" readonly>
         <br>
-        <label for="direccion">Dirección:</label>
-        <input type="text" id="direccion" readonly>
-        <br>
         <button id="verificar" disabled>Verificar</button>
         <p id="resultado"></p>
         <p id="mensaje" class="detalle"></p> 
@@ -281,18 +278,51 @@
 
         async function loadData() {
             try {
-                const responseClientes = await fetch('clientes_segmentacion.json');
+                // Carga con validación de status para detectar 404/CORS rápidamente
+                const responseClientes = await fetch('clientes_segmentacion.json', { cache: 'no-store' });
+                if (!responseClientes.ok) throw new Error('clientes_segmentacion.json -> ' + responseClientes.status + ' ' + responseClientes.statusText);
                 const clientesSegmentacion = await responseClientes.json();
 
-                const responseCambios = await fetch('cambios.json');
+                const responseCambios = await fetch('cambios.json', { cache: 'no-store' });
+                if (!responseCambios.ok) throw new Error('cambios.json -> ' + responseCambios.status + ' ' + responseCambios.statusText);
                 const cambiosData = await responseCambios.json();
 
-                const responseRestricciones = await fetch('restricciones.json');
+                const responseRestricciones = await fetch('restricciones.json', { cache: 'no-store' });
+                if (!responseRestricciones.ok) throw new Error('restricciones.json -> ' + responseRestricciones.status + ' ' + responseRestricciones.statusText);
                 const restricciones = await responseRestricciones.json();
+
+                console.log('[OK] JSON cargados:', {
+                    clientes_segmentacion: Array.isArray(clientesSegmentacion) ? clientesSegmentacion.length : 'no-array',
+                    cambios: Array.isArray(cambiosData) ? cambiosData.length : 'no-array',
+                    restricciones: Array.isArray(restricciones) ? restricciones.length : 'no-array'
+                });
 
                 cargarDatosPromorack(clientesSegmentacion, restricciones);
                 cargarDatosCambios(cambiosData, clientesSegmentacion, restricciones);
             } catch (error) {
+                console.error('Error loading data:', error);
+
+                // Mensaje visible (sin romper UI)
+                const msg = 'No se pudieron cargar los JSON.
+
+' +
+                            '1) Asegúrate de abrir el HTML desde un servidor (no con doble click).
+' +
+                            '   - Python: python -m http.server 8000
+' +
+                            '   - Luego: http://localhost:8000/
+
+' +
+                            '2) Verifica que los archivos estén en la misma carpeta y con estos nombres exactos:
+' +
+                            '   clientes_segmentacion.json, cambios.json, restricciones.json
+
+' +
+                            'Detalle técnico: ' + (error && error.message ? error.message : error);
+
+                alert(msg);
+            }
+        } catch (error) {
                 console.error('Error loading data:', error);
             }
         }
@@ -355,8 +385,7 @@
                     $('#nombreNegocio').val('');
                     $('#nombreCliente').val('');
                     $('#tipoCluster').val('');
-                    $('#direccion').val('');
-                    $('#resultado').hide();
+$('#resultado').hide();
                     $('#agregar').prop('disabled', true);
                     $('#verificar').prop('disabled', true);
                     $('#mensaje').hide();
@@ -391,8 +420,7 @@
                     $('#nombreNegocio').addClass('highlight-background');
                     $('#nombreCliente').addClass('highlight-background');
                     $('#tipoCluster').addClass('highlight-background');
-                    $('#direccion').addClass('highlight-background');
-                    return;
+return;
                 }
 
                 const clienteData = combina[0];
@@ -407,16 +435,13 @@
                 $('#ruta').val(clienteData['Ruta']);
                 $('#nombreNegocio').val(clienteData['Nombre_de_Cliente']);
                 $('#nombreCliente').val(clienteData['Nombre_de_Negocio']);
-                $('#direccion').val(clienteData['Direccion']);
-
-                // Detectar si tiene restricción "Razón Social"
+// Detectar si tiene restricción "Razón Social"
                 const restr = restricciones.find(r => r.Codigo === selectedClienteTruncado);
                 const esRazonSocial = restr && (restr.No_Aplica_Por || "").toLowerCase().includes("razón social");
 
                 // Si es Razón Social, en tipoCluster debe verse SOLO "Razón Social"
                 // Tipo de Cluster: SIEMPRE mostrar el cluster real
                 $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
-
 
                 // Resaltado: mantener/optimizar O Razón Social
                 const cluster = (clienteData['Tipo_de_Cluster'] || "").toLowerCase();
@@ -431,8 +456,7 @@
                 if (esRazonSocial) {
                     $('#nombreNegocio').addClass('highlight-background');
                     $('#nombreCliente').addClass('highlight-background');
-                    $('#direccion').addClass('highlight-background');
-                }
+}
 
                 resultadoElement.hide();
                 agregarButton.prop('disabled', true);
@@ -485,9 +509,7 @@
                             $('#nombreNegocio').addClass('highlight-background');
                             $('#nombreCliente').addClass('highlight-background');
                             $('#tipoCluster').addClass('highlight-background');
-                            $('#direccion').addClass('highlight-background');
-
-                            agregarButton.prop('disabled', false);
+agregarButton.prop('disabled', false);
                             mensajeElement.hide();
                         } else {
                             resultadoElement
@@ -503,15 +525,13 @@
                             $('#nombreNegocio').addClass('highlight-background');
                             $('#nombreCliente').addClass('highlight-background');
                             $('#tipoCluster').addClass('highlight-background');
-                            $('#direccion').addClass('highlight-background');
-
-                            // Forzar el campo a "Razón Social" cuando aplique
+// Forzar el campo a "Razón Social" cuando aplique
                             $('#tipoCluster').val('Razón Social');
                         }
                     } else {
                         if (esMantOpt) {
                             resultadoElement
-                                .text('Sujeto a Autorización por Dirección Comercial: ' + motivo)
+                                .text('Aplica (Excepción Mantener/Optimizar): ' + motivo)
                                 .removeClass('no-aplica').addClass('aplica').show();
 
                             allowAgregarPromorack = true;
@@ -535,8 +555,7 @@
                             $('#nombreNegocio').addClass('highlight-background');
                             $('#nombreCliente').addClass('highlight-background');
                             $('#tipoCluster').addClass('highlight-background');
-                            $('#direccion').addClass('highlight-background');
-                        }
+}
                     }
                 } else {
                     resultadoElement.text('Aplica').removeClass('no-aplica').addClass('aplica').show();
@@ -566,8 +585,8 @@
                 const nombreNegocio = $('#nombreNegocio').val();
                 const nombreCliente = $('#nombreCliente').val();
                 const tipoClusterActual = $('#tipoCluster').val(); // puede ser "Razón Social"
-                const direccion = $('#direccion').val();
-                const codigoCliente = cliente.slice(0, 13);
+                const direccion =
+const codigoCliente = cliente.slice(0, 13);
 
                 if (esCodigoRepetido(codigoCliente)) {
                     $('#mensajeRepetido').show();
@@ -601,8 +620,7 @@
                     Codigo_Cliente: codigoCliente,
                     Nombre_de_Cliente: nombreNegocio,
                     Nombre_de_Negocio: nombreCliente,
-                    Tipo_de_Cluster: valorAccion,
-                    Direccion: direccion
+                    Tipo_de_Cluster: valorAccion
                 };
 
                 clientesAgregados.push(nuevoCliente);
@@ -646,8 +664,7 @@
                 $('#nombreNegocio').val('');
                 $('#nombreCliente').val('');
                 $('#tipoCluster').val('');
-                $('#direccion').val('');
-                $('#resultado').hide();
+$('#resultado').hide();
                 $('#agregar').prop('disabled', true);
                 $('#verificar').prop('disabled', true);
                 $('#mensaje').hide();
@@ -670,10 +687,7 @@
                     return;
                 }
 
-                const clientesParaExcel = clientesAgregados.map(cliente => {
-                    const { Direccion, ...clienteSinDireccion } = cliente;
-                    return clienteSinDireccion;
-                });
+                const clientesParaExcel = clientesAgregados;
 
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.json_to_sheet(clientesParaExcel);
@@ -961,8 +975,7 @@
             $('#nombreNegocio').removeClass('highlight-background').css('background-color', 'white');
             $('#nombreCliente').removeClass('highlight-background').css('background-color', 'white');
             $('#tipoCluster').removeClass('highlight-background').css('background-color', 'white');
-            $('#direccion').removeClass('highlight-background').css('background-color', 'white');
-        }
+}
 
         function resetCambiosForm() {
             $('#centroCambios').val('').trigger('change');
