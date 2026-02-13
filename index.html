@@ -473,41 +473,28 @@
                     //    - En otros casos -> NO se permite agregar.
 
                     if (esRazonSocial) {
-                        if (esMantOpt) {
-                            resultadoElement
-                                .text('Aplica: Sujeto a autorización de dirección comercial')
-                                .removeClass('no-aplica').addClass('aplica').show();
+                        // 🚨 Regla principal: si aplica por Razón Social, NO se puede agregar NUNCA,
+                        // aunque el cluster sea Mantener/Optimizar.
+                        resultadoElement
+                            .text('No Aplica: ' + motivo)
+                            .removeClass('aplica').addClass('no-aplica').show();
 
-                            allowAgregarPromorack = true;
-                            accionOverridePromorack = 'Sujeto a autorización de dirección comercial';
+                        allowAgregarPromorack = false;
+                        accionOverridePromorack = null;
+                        agregarButton.prop('disabled', true);
 
-                            // Mantener resaltado de campos sensibles por Razón Social
-                            $('#nombreNegocio').addClass('highlight-background');
-                            $('#nombreCliente').addClass('highlight-background');
-                            $('#tipoCluster').addClass('highlight-background');
-                            $('#direccion').addClass('highlight-background');
+                        mensajeElement.show();
 
-                            agregarButton.prop('disabled', false);
-                            mensajeElement.hide();
-                        } else {
-                            resultadoElement
-                                .text('No Aplica: ' + motivo)
-                                .removeClass('aplica').addClass('no-aplica').show();
+                        // Resaltar campos sensibles por Razón Social
+                        $('#nombreNegocio').addClass('highlight-background');
+                        $('#nombreCliente').addClass('highlight-background');
+                        $('#tipoCluster').addClass('highlight-background');
+                        $('#direccion').addClass('highlight-background');
 
-                            allowAgregarPromorack = false;
-                            agregarButton.prop('disabled', true);
+                        // Forzar el campo a "Razón Social" cuando aplique
+                        $('#tipoCluster').val('Razón Social');
 
-                            mensajeElement.show();
-
-                            // Resaltar siempre si hay restricción
-                            $('#nombreNegocio').addClass('highlight-background');
-                            $('#nombreCliente').addClass('highlight-background');
-                            $('#tipoCluster').addClass('highlight-background');
-                            $('#direccion').addClass('highlight-background');
-
-                            // Forzar el campo a "Razón Social" cuando aplique
-                            $('#tipoCluster').val('Razón Social');
-                        }
+                        return;
                     } else {
                         if (esMantOpt) {
                             resultadoElement
