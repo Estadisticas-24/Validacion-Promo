@@ -206,9 +206,6 @@
         <label for="tipoCluster">Tipo de Cluster:</label>
         <input type="text" id="tipoCluster" readonly>
         <br>
-        <label for="direccion">Dirección:</label>
-        <input type="text" id="direccion" readonly>
-        <br>
         <button id="verificar" disabled>Verificar</button>
         <p id="resultado"></p>
         <p id="mensaje" class="detalle"></p> 
@@ -355,8 +352,7 @@
                     $('#nombreNegocio').val('');
                     $('#nombreCliente').val('');
                     $('#tipoCluster').val('');
-                    $('#direccion').val('');
-                    $('#resultado').hide();
+$('#resultado').hide();
                     $('#agregar').prop('disabled', true);
                     $('#verificar').prop('disabled', true);
                     $('#mensaje').hide();
@@ -391,8 +387,7 @@
                     $('#nombreNegocio').addClass('highlight-background');
                     $('#nombreCliente').addClass('highlight-background');
                     $('#tipoCluster').addClass('highlight-background');
-                    $('#direccion').addClass('highlight-background');
-                    return;
+return;
                 }
 
                 const clienteData = combina[0];
@@ -407,16 +402,13 @@
                 $('#ruta').val(clienteData['Ruta']);
                 $('#nombreNegocio').val(clienteData['Nombre_de_Cliente']);
                 $('#nombreCliente').val(clienteData['Nombre_de_Negocio']);
-                $('#direccion').val(clienteData['Direccion']);
-
-                // Detectar si tiene restricción "Razón Social"
+// Detectar si tiene restricción "Razón Social"
                 const restr = restricciones.find(r => r.Codigo === selectedClienteTruncado);
                 const esRazonSocial = restr && (restr.No_Aplica_Por || "").toLowerCase().includes("razón social");
 
                 // Si es Razón Social, en tipoCluster debe verse SOLO "Razón Social"
                 // Tipo de Cluster: SIEMPRE mostrar el cluster real
                 $('#tipoCluster').val(clienteData['Tipo_de_Cluster']);
-
 
                 // Resaltado: mantener/optimizar O Razón Social
                 const cluster = (clienteData['Tipo_de_Cluster'] || "").toLowerCase();
@@ -431,8 +423,7 @@
                 if (esRazonSocial) {
                     $('#nombreNegocio').addClass('highlight-background');
                     $('#nombreCliente').addClass('highlight-background');
-                    $('#direccion').addClass('highlight-background');
-                }
+}
 
                 resultadoElement.hide();
                 agregarButton.prop('disabled', true);
@@ -473,32 +464,41 @@
                     //    - En otros casos -> NO se permite agregar.
 
                     if (esRazonSocial) {
-                        // 🚨 Regla principal: si aplica por Razón Social, NO se puede agregar NUNCA,
-                        // aunque el cluster sea Mantener/Optimizar.
-                        resultadoElement
-                            .text('No Aplica: ' + motivo)
-                            .removeClass('aplica').addClass('no-aplica').show();
+                        if (esMantOpt) {
+                            resultadoElement
+                                .text('Aplica: Sujeto a autorización de dirección comercial')
+                                .removeClass('no-aplica').addClass('aplica').show();
 
-                        allowAgregarPromorack = false;
-                        accionOverridePromorack = null;
-                        agregarButton.prop('disabled', true);
+                            allowAgregarPromorack = true;
+                            accionOverridePromorack = 'Sujeto a autorización de dirección comercial';
 
-                        mensajeElement.show();
+                            // Mantener resaltado de campos sensibles por Razón Social
+                            $('#nombreNegocio').addClass('highlight-background');
+                            $('#nombreCliente').addClass('highlight-background');
+                            $('#tipoCluster').addClass('highlight-background');
+agregarButton.prop('disabled', false);
+                            mensajeElement.hide();
+                        } else {
+                            resultadoElement
+                                .text('No Aplica: ' + motivo)
+                                .removeClass('aplica').addClass('no-aplica').show();
 
-                        // Resaltar campos sensibles por Razón Social
-                        $('#nombreNegocio').addClass('highlight-background');
-                        $('#nombreCliente').addClass('highlight-background');
-                        $('#tipoCluster').addClass('highlight-background');
-                        $('#direccion').addClass('highlight-background');
+                            allowAgregarPromorack = false;
+                            agregarButton.prop('disabled', true);
 
-                        // Forzar el campo a "Razón Social" cuando aplique
-                        $('#tipoCluster').val('Razón Social');
+                            mensajeElement.show();
 
-                        return;
+                            // Resaltar siempre si hay restricción
+                            $('#nombreNegocio').addClass('highlight-background');
+                            $('#nombreCliente').addClass('highlight-background');
+                            $('#tipoCluster').addClass('highlight-background');
+// Forzar el campo a "Razón Social" cuando aplique
+                            $('#tipoCluster').val('Razón Social');
+                        }
                     } else {
                         if (esMantOpt) {
                             resultadoElement
-                                .text('Sujeto a Autorización por Dirección Comercial: ' + motivo)
+                                .text('Aplica (Excepción Mantener/Optimizar): ' + motivo)
                                 .removeClass('no-aplica').addClass('aplica').show();
 
                             allowAgregarPromorack = true;
@@ -522,8 +522,7 @@
                             $('#nombreNegocio').addClass('highlight-background');
                             $('#nombreCliente').addClass('highlight-background');
                             $('#tipoCluster').addClass('highlight-background');
-                            $('#direccion').addClass('highlight-background');
-                        }
+}
                     }
                 } else {
                     resultadoElement.text('Aplica').removeClass('no-aplica').addClass('aplica').show();
@@ -553,8 +552,8 @@
                 const nombreNegocio = $('#nombreNegocio').val();
                 const nombreCliente = $('#nombreCliente').val();
                 const tipoClusterActual = $('#tipoCluster').val(); // puede ser "Razón Social"
-                const direccion = $('#direccion').val();
-                const codigoCliente = cliente.slice(0, 13);
+                const direccion =
+const codigoCliente = cliente.slice(0, 13);
 
                 if (esCodigoRepetido(codigoCliente)) {
                     $('#mensajeRepetido').show();
@@ -588,8 +587,7 @@
                     Codigo_Cliente: codigoCliente,
                     Nombre_de_Cliente: nombreNegocio,
                     Nombre_de_Negocio: nombreCliente,
-                    Tipo_de_Cluster: valorAccion,
-                    Direccion: direccion
+                    Tipo_de_Cluster: valorAccion
                 };
 
                 clientesAgregados.push(nuevoCliente);
@@ -633,8 +631,7 @@
                 $('#nombreNegocio').val('');
                 $('#nombreCliente').val('');
                 $('#tipoCluster').val('');
-                $('#direccion').val('');
-                $('#resultado').hide();
+$('#resultado').hide();
                 $('#agregar').prop('disabled', true);
                 $('#verificar').prop('disabled', true);
                 $('#mensaje').hide();
@@ -948,8 +945,7 @@
             $('#nombreNegocio').removeClass('highlight-background').css('background-color', 'white');
             $('#nombreCliente').removeClass('highlight-background').css('background-color', 'white');
             $('#tipoCluster').removeClass('highlight-background').css('background-color', 'white');
-            $('#direccion').removeClass('highlight-background').css('background-color', 'white');
-        }
+}
 
         function resetCambiosForm() {
             $('#centroCambios').val('').trigger('change');
