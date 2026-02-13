@@ -273,6 +273,12 @@
         let estadoBoton = 'Desactivar';
         let contadorCambios = 0;
 
+        // Estado para reglas de restricción/cluster
+        let clusterRawActual = '';
+        let codigoClienteActual = '';
+        let allowAgregarPromorack = false;
+        let accionOverridePromorack = null; // e.g. 'Sujeto a autorización de dirección comercial'
+
         async function loadData() {
             try {
                 const responseClientes = await fetch('clientes_segmentacion.json');
@@ -355,6 +361,10 @@
                     $('#verificar').prop('disabled', true);
                     $('#mensaje').hide();
                     resetInputStyles();
+                    allowAgregarPromorack = false;
+                    accionOverridePromorack = null;
+                    clusterRawActual = '';
+                    codigoClienteActual = '';
                     return;
                 }
 
@@ -386,6 +396,12 @@
                 }
 
                 const clienteData = combina[0];
+
+                // Guardar estado actual para validación/agregado
+                clusterRawActual = (clienteData['Tipo_de_Cluster'] || '');
+                codigoClienteActual = selectedClienteTruncado;
+                allowAgregarPromorack = false;
+                accionOverridePromorack = null;
 
                 // Cargar campos base
                 $('#ruta').val(clienteData['Ruta']);
@@ -435,25 +451,98 @@
                 const agregarButton = $('#agregar');
                 const mensajeElement = $('#mensaje');
 
+                // Reset estado por defecto
+                allowAgregarPromorack = false;
+                accionOverridePromorack = null;
+
+                // Cluster real del cliente (no el texto forzado en el input)
+                const cluster = (clusterRawActual || $('#tipoCluster').val() || '').toLowerCase();
+                const esMantOpt = (cluster === 'mantener' || cluster === 'optimizar');
+
                 if (restriccionesCliente) {
-                    resultadoElement.text('No Aplica: ' + restriccionesCliente.No_Aplica_Por)
-                        .removeClass('aplica').addClass('no-aplica').show();
-                    agregarButton.prop('disabled', true);
-                    mensajeElement.show();
+                    const motivo = (restriccionesCliente.No_Aplica_Por || '');
+                    const esRazonSocial = motivo.toLowerCase().includes('razón social') || motivo.toLowerCase().includes('razon social');
 
-                    // Resaltar siempre si hay restricción
-                    $('#nombreNegocio').addClass('highlight-background');
-                    $('#nombreCliente').addClass('highlight-background');
-                    $('#tipoCluster').addClass('highlight-background');
-                    $('#direccion').addClass('highlight-background');
+                    // --- NUEVAS REGLAS ---
+                    // 1) Si el motivo es Razón Social:
+                    //    - Si el cluster es Mantener/Optimizar -> SE PERMITE agregar,
+                    //      y se marca como "Sujeto a autorización de dirección comercial".
+                    //    - En otros casos -> NO se permite agregar.
+                    // 2) Para otros motivos de restricción:
+                    //    - Si el cluster es Mantener/Optimizar -> SE PERMITE agregar (excepción).
+                    //    - En otros casos -> NO se permite agregar.
 
-                    // Si la restricción incluye Razón Social, forzar el campo a "Razón Social"
-                    const esRazonSocial = (restriccionesCliente.No_Aplica_Por || "").toLowerCase().includes("razón social");
                     if (esRazonSocial) {
-                        $('#tipoCluster').val('Razón Social');
+                        if (esMantOpt) {
+                            resultadoElement
+                                .text('Aplica: Sujeto a autorización de dirección comercial')
+                                .removeClass('no-aplica').addClass('aplica').show();
+
+                            allowAgregarPromorack = true;
+                            accionOverridePromorack = 'Sujeto a autorización de dirección comercial';
+
+                            // Mantener resaltado de campos sensibles por Razón Social
+                            $('#nombreNegocio').addClass('highlight-background');
+                            $('#nombreCliente').addClass('highlight-background');
+                            $('#tipoCluster').addClass('highlight-background');
+                            $('#direccion').addClass('highlight-background');
+
+                            agregarButton.prop('disabled', false);
+                            mensajeElement.hide();
+                        } else {
+                            resultadoElement
+                                .text('No Aplica: ' + motivo)
+                                .removeClass('aplica').addClass('no-aplica').show();
+
+                            allowAgregarPromorack = false;
+                            agregarButton.prop('disabled', true);
+
+                            mensajeElement.show();
+
+                            // Resaltar siempre si hay restricción
+                            $('#nombreNegocio').addClass('highlight-background');
+                            $('#nombreCliente').addClass('highlight-background');
+                            $('#tipoCluster').addClass('highlight-background');
+                            $('#direccion').addClass('highlight-background');
+
+                            // Forzar el campo a "Razón Social" cuando aplique
+                            $('#tipoCluster').val('Razón Social');
+                        }
+                    } else {
+                        if (esMantOpt) {
+                            resultadoElement
+                                .text('Aplica (Excepción Mantener/Optimizar): ' + motivo)
+                                .removeClass('no-aplica').addClass('aplica').show();
+
+                            allowAgregarPromorack = true;
+                            accionOverridePromorack = null;
+
+                            // Resaltar el cluster porque es Mantener/Optimizar
+                            $('#tipoCluster').addClass('highlight-background');
+
+                            agregarButton.prop('disabled', false);
+                            mensajeElement.hide();
+                        } else {
+                            resultadoElement
+                                .text('No Aplica: ' + motivo)
+                                .removeClass('aplica').addClass('no-aplica').show();
+
+                            allowAgregarPromorack = false;
+                            agregarButton.prop('disabled', true);
+                            mensajeElement.show();
+
+                            // Resaltar siempre si hay restricción
+                            $('#nombreNegocio').addClass('highlight-background');
+                            $('#nombreCliente').addClass('highlight-background');
+                            $('#tipoCluster').addClass('highlight-background');
+                            $('#direccion').addClass('highlight-background');
+                        }
                     }
                 } else {
                     resultadoElement.text('Aplica').removeClass('no-aplica').addClass('aplica').show();
+                    allowAgregarPromorack = true;
+                    accionOverridePromorack = null;
+
                     agregarButton.prop('disabled', false);
                     mensajeElement.hide();
 
@@ -487,7 +576,8 @@
                 $('#mensajeRepetido').hide();
 
                 const resultadoElement = $('#resultado');
-                if (resultadoElement.hasClass('no-aplica')) {
+                if (!allowAgregarPromorack) {
+                    // Si no pasó verificación o no cumple reglas de excepción
                     $('#mensaje').show();
                     return;
                 }
@@ -496,8 +586,13 @@
                 const restr = restricciones.find(r => r.Codigo === codigoCliente);
                 const esRazonSocial = restr && (restr.No_Aplica_Por || "").toLowerCase().includes("razón social");
 
-                // Valor a mostrar en la columna "Acción" (la tuya realmente es el cluster/estado)
-                const valorAccion = esRazonSocial ? 'Razón Social' : (tipoClusterActual || '');
+                // Valor a mostrar en la columna "Acción" (cluster/estado)
+                // - Si se activó override (Razón Social + Mantener/Optimizar) usar texto especial
+                // - Si es Razón Social normal, mostrar "Razón Social"
+                // - Caso general: mostrar el cluster real
+                const valorAccion = accionOverridePromorack
+                    ? accionOverridePromorack
+                    : (esRazonSocial ? 'Razón Social' : (tipoClusterActual || ''));
 
                 const nuevoCliente = {
                     Centro: centro,
@@ -556,6 +651,10 @@
                 $('#agregar').prop('disabled', true);
                 $('#verificar').prop('disabled', true);
                 $('#mensaje').hide();
+
+                // Reset estado de agregado
+                allowAgregarPromorack = false;
+                accionOverridePromorack = null;
 
                 if (clientesAgregados.length > 0) {
                     $('#descargarExcel').prop('disabled', false);
